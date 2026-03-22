@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>质数工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#64748b',
+                        neutral: '#f1f5f9',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .transition-smooth {
+                transition: all 0.3s ease;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans">
+    <div class="container mx-auto px-4 py-8 max-w-3xl">
+        <header class="text-center mb-10">
+            <h1 class="text-[clamp(2.0rem,4vw,2.5rem)] font-bold text-gray-800 mb-2">大斌的质数工具</h1>
+            <p class="text-gray-500">高端的质数判断与生成工具</p>
+        </header>
+
+        <main class="bg-white rounded-xl shadow-md p-6 md:p-8 mb-8">
+            <!-- 初始选项界面 -->
+            <div id="optionScreen" class="block">
+                <h2 class="text-xl font-semibold text-gray-700 mb-6">请选择功能：</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <button id="option1" class="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-lg hover:bg-primary hover:text-white hover:border-primary transition-smooth">
+                        <i class="fa fa-check-circle text-3xl mb-3"></i>
+                        <span>1. 判断质数</span>
+                    </button>
+                    <button id="option2" class="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-lg hover:bg-primary hover:text-white hover:border-primary transition-smooth">
+                        <i class="fa fa-list text-3xl mb-3"></i>
+                        <span>2. 生成质数列表</span>
+                    </button>
+                    <button id="option3" class="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-lg hover:bg-red-500 hover:text-white hover:border-red-500 transition-smooth">
+                        <i class="fa fa-sign-out text-3xl mb-3"></i>
+                        <span>3. 退出程序</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 选项1：判断质数 -->
+            <div id="primeCheckScreen" class="hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-semibold text-gray-700">判断质数</h2>
+                    <button id="back1" class="text-gray-500 hover:text-gray-800 transition-smooth">
+                        <i class="fa fa-arrow-left mr-1"></i> 返回
+                    </button>
+                </div>
+                <div class="mb-4">
+                    <label for="checkNumber" class="block text-gray-700 mb-2">请输入数字（输入-1返回）：</label>
+                    <div class="flex">
+                        <input type="number" id="checkNumber" class="flex-1 px-4 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="输入数字">
+                        <button id="checkBtn" class="bg-primary text-white px-4 py-2 rounded-r-lg hover:bg-primary/90 transition-smooth">
+                            判断
+                        </button>
+                    </div>
+                </div>
+                <div id="checkResult" class="mt-4 p-4 rounded-lg hidden"></div>
+            </div>
+
+            <!-- 选项2：生成质数列表 -->
+            <div id="primeListScreen" class="hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-semibold text-gray-700">生成质数列表</h2>
+                    <button id="back2" class="text-gray-500 hover:text-gray-800 transition-smooth">
+                        <i class="fa fa-arrow-left mr-1"></i> 返回
+                    </button>
+                </div>
+                <div class="mb-4">
+                    <label for="maxNumber" class="block text-gray-700 mb-2">请输入上限（>5，输入-1返回）：</label>
+                    <div class="flex">
+                        <input type="number" id="maxNumber" class="flex-1 px-4 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="输入上限数字">
+                        <button id="generateBtn" class="bg-primary text-white px-4 py-2 rounded-r-lg hover:bg-primary/90 transition-smooth">
+                            生成
+                        </button>
+                    </div>
+                </div>
+                <div id="listResult" class="mt-4 hidden">
+                    <div class="mb-3 flex justify-between items-center">
+                        <p class="text-gray-700"><span id="countInfo"></span></p>
+                        <p class="text-sm text-gray-500"><span id="timeInfo"></span></p>
+                    </div>
+                    <div id="primeGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-2 overflow-auto max-h-[400px] p-2 border border-gray-200 rounded-lg"></div>
+                </div>
+                <div id="listError" class="mt-4 p-4 rounded-lg hidden"></div>
+            </div>
+
+            <!-- 错误提示 -->
+            <div id="errorToast" class="fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg transform translate-x-full transition-transform duration-300 flex items-center">
+                <i class="fa fa-exclamation-circle mr-2"></i>
+                <span id="errorMessage"></span>
+            </div>
+        </main>
+
+        <footer class="text-center text-gray-500 text-sm">
+            <p>大斌的质数工具-2025&copy;zcb1010101</p>
+        </footer>
+    </div>
+
+    <script>
+        // 质数判断函数
+        function isPrime(num) {
+            if (num < 2) return false;
+            for (let i = 2; i < num; i++) {
+                if (num % i === 0) return false;
+            }
+            return true;
+        }
+
+        // DOM元素
+        const optionScreen = document.getElementById('optionScreen');
+        const primeCheckScreen = document.getElementById('primeCheckScreen');
+        const primeListScreen = document.getElementById('primeListScreen');
+        const errorToast = document.getElementById('errorToast');
+        const errorMessage = document.getElementById('errorMessage');
+
+        // 选项按钮
+        document.getElementById('option1').addEventListener('click', () => {
+            optionScreen.classList.add('hidden');
+            primeCheckScreen.classList.remove('hidden');
+        });
+
+        document.getElementById('option2').addEventListener('click', () => {
+            optionScreen.classList.add('hidden');
+            primeListScreen.classList.remove('hidden');
+        });
+
+        document.getElementById('option3').addEventListener('click', () => {
+            if (confirm('确定要退出程序吗？')) {
+                window.close();
+                // 如果window.close()被浏览器阻止，显示提示
+                setTimeout(() => {
+                    showError('程序已退出');
+                }, 100);
+            }
+        });
+
+        // 返回按钮
+        document.getElementById('back1').addEventListener('click', () => {
+            primeCheckScreen.classList.add('hidden');
+            optionScreen.classList.remove('hidden');
+            document.getElementById('checkResult').classList.add('hidden');
+            document.getElementById('checkNumber').value = '';
+        });
+
+        document.getElementById('back2').addEventListener('click', () => {
+            primeListScreen.classList.add('hidden');
+            optionScreen.classList.remove('hidden');
+            document.getElementById('listResult').classList.add('hidden');
+            document.getElementById('listError').classList.add('hidden');
+            document.getElementById('maxNumber').value = '';
+        });
+
+        // 显示错误信息
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorToast.classList.remove('translate-x-full');
+            setTimeout(() => {
+                errorToast.classList.add('translate-x-full');
+            }, 1000);
+        }
+
+        // 选项1：判断质数
+        document.getElementById('checkBtn').addEventListener('click', () => {
+            const input = document.getElementById('checkNumber');
+            const resultDiv = document.getElementById('checkResult');
+            const num = parseInt(input.value, 10);
+
+            if (isNaN(num)) {
+                showError('sb');
+                return;
+            }
+
+            if (num === -1) {
+                primeCheckScreen.classList.add('hidden');
+                optionScreen.classList.remove('hidden');
+                input.value = '';
+                resultDiv.classList.add('hidden');
+                return;
+            }
+
+            if (isPrime(num)) {
+                resultDiv.innerHTML = `<div class="bg-green-50 border border-green-200 text-green-700 p-3 rounded-lg">
+                    <i class="fa fa-check-circle mr-2"></i> ${num} 是质数
+                </div>`;
+            } else {
+                resultDiv.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg">
+                    <i class="fa fa-times-circle mr-2"></i> ${num} 不是质数
+                </div>`;
+            }
+            resultDiv.classList.remove('hidden');
+        });
+
+        // 选项2：生成质数列表
+        document.getElementById('generateBtn').addEventListener('click', () => {
+            const input = document.getElementById('maxNumber');
+            const resultDiv = document.getElementById('listResult');
+            const errorDiv = document.getElementById('listError');
+            const primeGrid = document.getElementById('primeGrid');
+            const countInfo = document.getElementById('countInfo');
+            const timeInfo = document.getElementById('timeInfo');
+            
+            const max = parseInt(input.value, 10);
+
+            if (isNaN(max)) {
+                showError('sb');
+                return;
+            }
+
+            if (max === -1) {
+                primeListScreen.classList.add('hidden');
+                optionScreen.classList.remove('hidden');
+                input.value = '';
+                resultDiv.classList.add('hidden');
+                errorDiv.classList.add('hidden');
+                return;
+            }
+
+            if (max <= 5) {
+                errorDiv.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg">
+                    <i class="fa fa-exclamation-circle mr-2"></i> sb
+                </div>`;
+                errorDiv.classList.remove('hidden');
+                resultDiv.classList.add('hidden');
+                return;
+            }
+
+            // 开始计算并计时
+            const startTime = performance.now();
+            const primes = [];
+            
+            for (let i = 2; i <= max; i++) {
+                if (isPrime(i)) {
+                    primes.push(i);
+                }
+            }
+
+            const endTime = performance.now();
+            const elapsedTime = (endTime - startTime) / 1000;
+
+            // 显示结果
+            errorDiv.classList.add('hidden');
+            countInfo.textContent = `${max} 以内的质数共有 ${primes.length} 个`;
+            timeInfo.textContent = `执行时间: ${elapsedTime.toFixed(6)} 秒`;
+            
+            // 清空并填充质数网格
+            primeGrid.innerHTML = '';
+            primes.forEach(prime => {
+                const primeElement = document.createElement('div');
+                primeElement.className = 'bg-neutral rounded p-2 text-center text-gray-700';
+                primeElement.textContent = prime;
+                primeGrid.appendChild(primeElement);
+            });
+
+            resultDiv.classList.remove('hidden');
+        });
+
+        // 支持回车键提交
+        document.getElementById('checkNumber').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('checkBtn').click();
+            }
+        });
+
+        document.getElementById('maxNumber').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('generateBtn').click();
+            }
+        });
+    </script>
+</body>
+</html>
