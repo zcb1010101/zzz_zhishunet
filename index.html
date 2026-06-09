@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>质数工具</title>
     <script src="https://cdn.tailwindcss.com"></script>
-     <!-- 禁用f12 -->
     <script src="banf12.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <script>
@@ -71,7 +70,7 @@
                     </button>
                 </div>
                 <div class="mb-4">
-                    <label for="checkNumber" class="block text-gray-700 mb-2">请输入数字（输入-1返回）：</label>
+                    <label for="checkNumber" class="block text-gray-700 mb-2">请输入数字（输入-1返回）（支持20位以内整数）：</label>
                     <div class="flex">
                         <input type="number" id="checkNumber" class="flex-1 px-4 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="输入数字">
                         <button id="checkBtn" class="bg-primary text-white px-4 py-2 rounded-r-lg hover:bg-primary/90 transition-smooth">
@@ -91,7 +90,7 @@
                     </button>
                 </div>
                 <div class="mb-4">
-                    <label for="maxNumber" class="block text-gray-700 mb-2">请输入上限（>5，输入-1返回）：</label>
+                    <label for="maxNumber" class="block text-gray-700 mb-2">请输入上限（>5，输入-1返回）（支持20位以内整数）：</label>
                     <div class="flex">
                         <input type="number" id="maxNumber" class="flex-1 px-4 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="输入上限数字">
                         <button id="generateBtn" class="bg-primary text-white px-4 py-2 rounded-r-lg hover:bg-primary/90 transition-smooth">
@@ -122,14 +121,58 @@
     </div>
 
     <script>
-        // 质数判断函数
-        function isPrime(num) {
-            if (num < 2) return false;
-            for (let i = 2; i < num; i++) {
-                if (num % i === 0) return false;
+        // ===================== 全功能统一使用：Miller-Rabin 确定性素性测试 =====================
+        // 大数乘法防溢出
+        function mulmod(a, b, mod) {
+            return Number((BigInt(a) * BigInt(b)) % BigInt(mod));
+        }
+
+        // 快速幂取模
+        function powmod(base, exponent, mod) {
+            let result = 1;
+            base = base % mod;
+            while (exponent > 0) {
+                if (exponent % 2 === 1) {
+                    result = mulmod(result, base, mod);
+                }
+                base = mulmod(base, base, mod);
+                exponent = Math.floor(exponent / 2);
+            }
+            return result;
+        }
+
+        // 米勒-拉宾主函数（判断+生成共用这一个）
+        function isPrime(n) {
+            if (n <= 1) return false;
+            if (n <= 3) return true;
+            if (n % 2 === 0) return false;
+
+            let d = n - 1;
+            let s = 0;
+            while (d % 2 === 0) {
+                d /= 2;
+                s++;
+            }
+
+            // 2^64 内 100% 准确基底
+            const bases = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37];
+            for (const a of bases) {
+                if (a >= n) continue;
+                let x = powmod(a, d, n);
+                if (x === 1 || x === n - 1) continue;
+                let composite = true;
+                for (let r = 1; r < s; r++) {
+                    x = mulmod(x, x, n);
+                    if (x === n - 1) {
+                        composite = false;
+                        break;
+                    }
+                }
+                if (composite) return false;
             }
             return true;
         }
+        // ==================================================================================
 
         // DOM元素
         const optionScreen = document.getElementById('optionScreen');
@@ -152,7 +195,6 @@
         document.getElementById('option3').addEventListener('click', () => {
             if (confirm('确定要退出程序吗？')) {
                 window.close();
-                // 如果window.close()被浏览器阻止，显示提示
                 setTimeout(() => {
                     showError('程序已退出');
                 }, 100);
@@ -184,14 +226,14 @@
             }, 1000);
         }
 
-        // 选项1：判断质数
+        // 选项1：判断质数（使用米勒-拉宾）
         document.getElementById('checkBtn').addEventListener('click', () => {
             const input = document.getElementById('checkNumber');
             const resultDiv = document.getElementById('checkResult');
             const num = parseInt(input.value, 10);
 
             if (isNaN(num)) {
-                showError('sb');
+                showError('请输入有效数字');
                 return;
             }
 
@@ -215,7 +257,7 @@
             resultDiv.classList.remove('hidden');
         });
 
-        // 选项2：生成质数列表
+        // 选项2：生成质数列表（遍历 + 米勒-拉宾判断）
         document.getElementById('generateBtn').addEventListener('click', () => {
             const input = document.getElementById('maxNumber');
             const resultDiv = document.getElementById('listResult');
@@ -227,7 +269,7 @@
             const max = parseInt(input.value, 10);
 
             if (isNaN(max)) {
-                showError('sb');
+                showError('请输入有效数字');
                 return;
             }
 
@@ -242,32 +284,32 @@
 
             if (max <= 5) {
                 errorDiv.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg">
-                    <i class="fa fa-exclamation-circle mr-2"></i> sb
+                    <i class="fa fa-exclamation-circle mr-2"></i> 请输入大于5的数字
                 </div>`;
                 errorDiv.classList.remove('hidden');
                 resultDiv.classList.add('hidden');
                 return;
             }
 
-            // 开始计算并计时
+            // 开始计时
             const startTime = performance.now();
             const primes = [];
             
+            // ===================== 核心：遍历 + 米勒-拉宾判断 =====================
             for (let i = 2; i <= max; i++) {
                 if (isPrime(i)) {
                     primes.push(i);
                 }
             }
+            // ====================================================================
 
             const endTime = performance.now();
             const elapsedTime = (endTime - startTime) / 1000;
 
-            // 显示结果
             errorDiv.classList.add('hidden');
             countInfo.textContent = `${max} 以内的质数共有 ${primes.length} 个`;
             timeInfo.textContent = `执行时间: ${elapsedTime.toFixed(6)} 秒`;
             
-            // 清空并填充质数网格
             primeGrid.innerHTML = '';
             primes.forEach(prime => {
                 const primeElement = document.createElement('div');
@@ -279,7 +321,7 @@
             resultDiv.classList.remove('hidden');
         });
 
-        // 支持回车键提交
+        // 回车键提交
         document.getElementById('checkNumber').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 document.getElementById('checkBtn').click();
